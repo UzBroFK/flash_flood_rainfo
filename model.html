@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAINFO — Model Lab | Government of India</title>
+    <meta name="description" content="RAINFO Model Lab — reproducible ML pipeline metrics, model comparison, EDA and live flood prediction playground.">
+
+    <style>
+        /* ============================================================
+           RAINFO Model Lab — matches the Government of India design system
+           ============================================================ */
+        :root {
+            --navy: #003366;
+            --navy-dark: #001f3f;
+            --accent: #cc0000;
+            --ink: #1e293b;
+            --ink-soft: #475569;
+            --muted: #64748b;
+            --line: #cbd5e1;
+            --line-soft: #e2e8f0;
+            --bg: #f0f0f0;
+            --card: #ffffff;
+            --ok: #138808;
+            --warn: #d97706;
+        }
+
+        * { box-sizing: border-box; border-radius: 0 !important; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+            background-color: var(--bg);
+            color: var(--ink);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .gov-strip { background: linear-gradient(90deg,#ff9933 0%,#ff9933 33%,#ffffff 33%,#ffffff 66%,#138808 66%,#138808 100%); height: 5px; }
+
+        .header {
+            background-color: var(--navy); color: #fff; padding: 14px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 3px solid var(--accent); flex-wrap: wrap; gap: 10px;
+        }
+        .header-identity { display: flex; align-items: center; gap: 14px; }
+        .header-identity img { height: 46px; filter: grayscale(100%) brightness(200%); }
+        .header-titles h1 { margin: 0; font-size: 21px; letter-spacing: 1px; text-transform: uppercase; }
+        .header-titles .subtitle { font-size: 12.5px; color: #cbd5e1; margin-top: 3px; }
+        .header-tag { font-size: 11px; border: 1px solid rgba(255,255,255,.7); padding: 4px 10px; letter-spacing: .6px; background: rgba(255,255,255,.08); text-transform: uppercase; }
+        .header-tag a { color: #fff; text-decoration: none; }
+        .header-tag a:hover { text-decoration: underline; }
+
+        /* ---------- Tabs ---------- */
+        .tab-bar {
+            display: flex; flex-wrap: wrap; gap: 0; background: #1e293b;
+            border-bottom: 3px solid var(--navy); padding: 0 16px;
+        }
+        .tab-btn {
+            padding: 12px 18px; font-size: 12px; font-weight: bold; letter-spacing: .5px;
+            text-transform: uppercase; color: #cbd5e1; background: transparent; border: 0;
+            border-bottom: 3px solid transparent; margin-bottom: -3px; cursor: pointer;
+        }
+        .tab-btn:hover { color: #fff; background: rgba(255,255,255,.06); }
+        .tab-btn.active { color: #fff; border-bottom-color: #ff9933; background: rgba(255,255,255,.08); }
+
+        .main { flex: 1; padding: 24px 16px; max-width: 1180px; width: 100%; margin: 0 auto; }
+        .view { display: none; }
+        .view.active { display: block; }
+
+        .panel {
+            background: var(--card); border: 1px solid #9ca3af; border-top: 4px solid var(--navy);
+            padding: 20px; margin-bottom: 18px;
+        }
+        .panel h2 {
+            margin: 0 0 4px; font-size: 15px; color: var(--navy);
+            text-transform: uppercase; letter-spacing: .5px;
+        }
+        .panel .panel-sub { font-size: 12px; color: var(--muted); margin: 0 0 16px; line-height: 1.5; }
+
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+
+        /* ---------- KPI cards ---------- */
+        .kpi { border: 1px solid var(--line); border-left: 4px solid var(--navy); background: #f8fafc; padding: 12px 14px; }
+        .kpi .kpi-val { font-size: 24px; font-weight: bold; color: var(--navy); }
+        .kpi .kpi-lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+        /* ---------- Tables ---------- */
+        .table-wrap { overflow-x: auto; }
+        table.gov { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        table.gov th {
+            background: var(--navy); color: #fff; padding: 9px 10px; text-align: right;
+            font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
+        }
+        table.gov th:first-child, table.gov td:first-child { text-align: left; }
+        table.gov td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); text-align: right; font-variant-numeric: tabular-nums; }
+        table.gov tr:hover td { background: #eef4fa; }
+        table.gov tr.serving td { background: #e0f2fe; font-weight: bold; }
+        .badge-serving { display: inline-block; background: #b91c1c; color: #fff; font-size: 9px; padding: 2px 6px; margin-left: 6px; letter-spacing: .4px; vertical-align: middle; }
+
+        /* ---------- Bars (feature importance) ---------- */
+        .imp-row { display: grid; grid-template-columns: 190px 1fr 56px; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 11.5px; }
+        .imp-bar { height: 14px; background: var(--navy); min-width: 2px; }
+        .imp-row select-model { }
+        .imp-val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+        /* ---------- Charts ---------- */
+        .chart-img { width: 100%; height: auto; border: 1px solid var(--line-soft); display: block; }
+        canvas.metric-chart { width: 100%; height: 320px; border: 1px solid var(--line-soft); background: #fff; }
+
+        /* ---------- Prediction playground ---------- */
+        .lab-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .ctl { margin-bottom: 12px; }
+        .ctl label { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--ink-soft); margin-bottom: 4px; }
+        .ctl label b { color: var(--navy); font-variant-numeric: tabular-nums; }
+        .ctl input[type=range] { width: 100%; accent-color: var(--navy); }
+        .preset-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+        .preset-btn {
+            font-size: 10.5px; padding: 6px 10px; border: 1px solid var(--navy); background: #fff;
+            color: var(--navy); cursor: pointer; text-transform: uppercase; letter-spacing: .3px; font-weight: bold;
+        }
+        .preset-btn:hover { background: var(--navy); color: #fff; }
+        .preset-btn.severe { border-color: #b91c1c; color: #b91c1c; }
+        .preset-btn.severe:hover { background: #b91c1c; color: #fff; }
+
+        .gauge-card { border: 1px solid #9ca3af; background: #f8fafc; padding: 18px; text-align: center; }
+        .gauge-num { font-size: 52px; font-weight: bold; line-height: 1; font-variant-numeric: tabular-nums; }
+        .gauge-tier { display: inline-block; font-size: 12px; font-weight: bold; letter-spacing: .6px; padding: 5px 14px; color: #fff; margin: 10px 0 4px; text-transform: uppercase; }
+        .gauge-sub { font-size: 11px; color: var(--muted); }
+        .mini-row { display: flex; justify-content: space-between; font-size: 11.5px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+        .mini-row span:first-child { color: var(--muted); }
+        .mini-row span:last-child { font-weight: bold; color: var(--navy); font-variant-numeric: tabular-nums; }
+        .actions-list { list-style: none; padding: 0; margin: 10px 0 0; font-size: 11.5px; color: var(--ink-soft); line-height: 1.7; text-align: left; }
+        .actions-list li::before { content: "▸ "; color: var(--navy); font-weight: bold; }
+
+        .env-line { font-size: 10.5px; color: var(--muted); margin-top: 10px; }
+        code.inline { background: #e2e8f0; padding: 1px 5px; font-size: 11px; }
+        .status-dot-ok { color: var(--ok); font-weight: bold; }
+        .status-dot-warn { color: var(--warn); font-weight: bold; }
+
+        .footer {
+            background-color: #1e293b; color: #f1f5f9; padding: 10px 16px;
+            display: flex; justify-content: space-between; font-size: 11px;
+            border-top: 2px solid var(--navy); flex-wrap: wrap; gap: 6px;
+        }
+
+        @media (max-width: 700px) {
+            .header-titles h1 { font-size: 15px; }
+            .header-titles .subtitle { font-size: 10.5px; }
+            .header-tag { display: none; }
+            .imp-row { grid-template-columns: 120px 1fr 48px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="gov-strip" title="Flag of India"></div>
+
+    <header class="header">
+        <div class="header-identity">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="State Emblem of India">
+            <div class="header-titles">
+                <h1>RAINFO — Model Lab</h1>
+                <div class="subtitle">Reproducible ML Pipeline &bull; Model Comparison &bull; EDA &bull; Prediction Playground &bull; NDMA</div>
+            </div>
+        </div>
+        <div class="header-tag"><a href="/">&#8592; Portal Gateway</a></div>
+    </header>
+
+    <nav class="tab-bar" role="tablist">
+        <button class="tab-btn active" data-view="overview">Overview</button>
+        <button class="tab-btn" data-view="comparison">Model Comparison</button>
+        <button class="tab-btn" data-view="curves">Curves &amp; Metrics</button>
+        <button class="tab-btn" data-view="importance">Feature Importance</button>
+        <button class="tab-btn" data-view="eda">EDA</button>
+        <button class="tab-btn" data-view="lab">Prediction Lab</button>
+    </nav>
+
+    <main class="main">
+        <!-- ================= OVERVIEW ================= -->
+        <section class="view active" id="view-overview">
+            <div class="panel">
+                <h2>Serving Model</h2>
+                <p class="panel-sub">Produced by the reproducible pipeline: <code class="inline">python -m ml.pipeline.run</code>. The serving artifact is a physics-informed soft-voting ensemble; full comparison across all models is reported openly below.</p>
+                <div class="grid-3" id="serving-kpis"></div>
+                <div class="env-line" id="env-line"></div>
+                <div class="env-line" id="pipeline-status"></div>
+            </div>
+            <div class="panel">
+                <h2>Dataset &amp; Pipeline</h2>
+                <div class="grid-3" id="data-kpis"></div>
+                <p class="panel-sub" style="margin-top:14px">
+                    Features: SCS-CN runoff (<code class="inline">Q = (P&minus;0.2S)&sup2;/(P+0.8S)</code>), Antecedent Precipitation Index,
+                    moisture-adjusted Curve Number (AMC I/II/III) and Kirpich time of concentration — computed by the
+                    <strong>same code path used at serving time</strong> (no train/serve drift).
+                    Stratified train/test split, 5-fold CV, fixed seed 42 for full reproducibility.
+                </p>
+            </div>
+        </section>
+
+        <!-- ================= COMPARISON ================= -->
+        <section class="view" id="view-comparison">
+            <div class="panel">
+                <h2>Model Comparison — Held-Out Test Set</h2>
+                <p class="panel-sub">All models evaluated on the same 20% stratified test split. Accuracy, precision, recall, F1, ROC-AUC, PR-AUC and Matthews Correlation Coefficient.</p>
+                <div class="table-wrap">
+                    <table class="gov" id="comparison-table">
+                        <thead>
+                            <tr><th>Model</th><th>Acc</th><th>Prec</th><th>Recall</th><th>F1</th><th>F2</th><th>ROC-AUC</th><th>PR-AUC</th><th>MCC</th><th>Kappa</th><th>Brier</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <p class="panel-sub" style="margin-top:12px">5-fold CV on the training split: <span id="cv-note"></span></p>
+            </div>
+        </section>
+
+        <!-- ================= CURVES ================= -->
+        <section class="view" id="view-curves">
+            <div class="panel">
+                <h2>ROC Curves</h2>
+                <p class="panel-sub">Receiver Operating Characteristic on the held-out test set, per model.</p>
+                <canvas class="metric-chart" id="roc-canvas" width="1000" height="640"></canvas>
+            </div>
+            <div class="panel">
+                <h2>Precision–Recall Curves</h2>
+                <p class="panel-sub">Precision-Recall trade-off — the operational view for imbalanced early-warning systems.</p>
+                <canvas class="metric-chart" id="pr-canvas" width="1000" height="640"></canvas>
+            </div>
+            <div class="panel">
+                <h2>Serving Model Detail</h2>
+                <div class="grid-3" id="serving-detail"></div>
+            </div>
+        </section>
+
+        <!-- ================= IMPORTANCE ================= -->
+        <section class="view" id="view-importance">
+            <div class="panel">
+                <h2>Feature Importances</h2>
+                <p class="panel-sub">
+                    Gini / gain importances normalised to sum to 1 per model.
+                    <select id="imp-model-select" style="font-size:11px; padding:2px 4px;"></select>
+                </p>
+                <div id="imp-bars"></div>
+                <p class="panel-sub" style="margin-top:12px">Topographic features (slope, elevation, Tc) carry small weight — rainfall history and soil saturation dominate flash-flood trigger risk in the monitored catchments.</p>
+            </div>
+        </section>
+
+        <!-- ================= EDA ================= -->
+        <section class="view" id="view-eda">
+            <div class="panel">
+                <h2>Exploratory Data Analysis</h2>
+                <p class="panel-sub">Generated automatically by the pipeline (<code class="inline">ml/scripts/eda.py</code>) — class balance, distributions by class, correlation structure and rainfall-flood relationship. <span id="eda-stats"></span></p>
+                <div class="grid-2" id="eda-gallery"></div>
+            </div>
+        </section>
+
+        <!-- ================= PREDICTION LAB ================= -->
+        <section class="view" id="view-lab">
+            <div class="panel">
+                <h2>Live Prediction Playground</h2>
+                <p class="panel-sub">Move the sliders to drive the live serving engine (<code class="inline">/api/predict</code>) — physics features are recomputed server-side and the hybrid ML+SCS-CN probability is returned in real time. Presets load calibrated historical scenarios.</p>
+                <div class="preset-row" id="preset-row"></div>
+                <div class="lab-grid">
+                    <div>
+                        <div class="ctl"><label>6-hour rainfall (mm) <b id="v-r6">60</b></label><input type="range" id="c-r6" min="0" max="500" value="60" step="1"></div>
+                        <div class="ctl"><label>24-hour rainfall (mm) <b id="v-r24">120</b></label><input type="range" id="c-r24" min="0" max="1000" value="120" step="5"></div>
+                        <div class="ctl"><label>3-day antecedent rain (mm) <b id="v-ant">40</b></label><input type="range" id="c-ant" min="0" max="500" value="40" step="1"></div>
+                        <div class="ctl"><label>Soil moisture (%) <b id="v-sm">55</b></label><input type="range" id="c-sm" min="0" max="100" value="55" step="1"></div>
+                        <div class="ctl"><label>Slope (degrees) <b id="v-slope">25</b></label><input type="range" id="c-slope" min="0" max="90" value="25" step="1"></div>
+                        <div class="ctl"><label>Elevation (m) <b id="v-elev">1500</b></label><input type="range" id="c-elev" min="0" max="9000" value="1500" step="50"></div>
+                        <div class="ctl"><label>Curve Number (CN) <b id="v-cn">75</b></label><input type="range" id="c-cn" min="30" max="100" value="75" step="1"></div>
+                    </div>
+                    <div>
+                        <div class="gauge-card">
+                            <div class="gauge-sub">FLOOD PROBABILITY (HYBRID ML + PHYSICS)</div>
+                            <div class="gauge-num" id="lab-prob" style="color:#138808">—</div>
+                            <div><span class="gauge-tier" id="lab-tier" style="background:#64748b">CONNECTING…</span></div>
+                            <div class="gauge-sub" id="lab-sub">Move a slider to query the engine</div>
+                        </div>
+                        <div style="margin-top:12px; background:#fff; border:1px solid var(--line-soft); padding:10px 12px;">
+                            <div class="mini-row"><span>ML model probability</span><span id="lab-mlprob">—</span></div>
+                            <div class="mini-row"><span>Physics (SCS-CN) probability</span><span id="lab-physprob">—</span></div>
+                            <div class="mini-row"><span>Expected runoff (SCS-CN)</span><span id="lab-runoff">—</span></div>
+                            <div class="mini-row"><span>Moisture-adjusted CN</span><span id="lab-cnadj">—</span></div>
+                            <div class="mini-row"><span>Kirpich time of concentration</span><span id="lab-tc">—</span></div>
+                            <div class="mini-row" style="border-bottom:0"><span>Lead time to flood</span><span id="lab-lead">—</span></div>
+                        </div>
+                        <ul class="actions-list" id="lab-actions"></ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div>Government of India &bull; National Disaster Management Authority &bull; NDMA Bhawan, New Delhi</div>
+        <div>RAINFO Model Lab &bull; Reproducible ML Pipeline &bull; Helpline 1078</div>
+    </footer>
+
+<script>
+"use strict";
+
+const API_BASE = window.location.protocol.startsWith('http')
+    ? `${window.location.origin}/api`
+    : 'http://localhost:8000/api';
+const REPORTS_BASE = window.location.protocol.startsWith('http')
+    ? `${window.location.origin}/model-reports`
+    : 'http://localhost:8000/model-reports';
+
+const NAVY = '#003366', RED = '#b91c1c', ORANGE = '#d97706', GREEN = '#138808';
+const MODEL_COLORS = {
+    LogisticRegression: '#94a3b8', RandomForest: '#0f766e', GradientBoosting: '#7c3aed',
+    LightGBM: '#003366', XGBoost: '#ea580c', Ensemble: '#b91c1c'
+};
+
+let METRICS = null, EDA = null;
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('view-' + btn.dataset.view).classList.add('active');
+        if (btn.dataset.view === 'curves') drawCurve('roc-canvas', 'roc');
+        if (btn.dataset.view === 'curves') drawCurve('pr-canvas', 'pr');
+    });
+});
+
+/* ---------- data loading ---------- */
+async function boot() {
+    try {
+        const [m, e] = await Promise.all([
+            fetch(`${API_BASE}/model/metrics`).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+            fetch(`${API_BASE}/model/eda`).then(r => r.ok ? r.json() : Promise.reject(r.status)).catch(() => null)
+        ]);
+        METRICS = m.metrics; EDA = e && e.eda;
+        renderOverview(); renderComparison(); renderImportance(); renderEDA(); renderServingDetail();
+        document.getElementById('pipeline-status').innerHTML =
+            '<span class="status-dot-ok">&#9679;</span> Pipeline report loaded — serving ensemble is live.';
+    } catch (err) {
+        document.getElementById('pipeline-status').innerHTML =
+            `<span class="status-dot-warn">&#9679;</span> Metrics report unavailable (${err}). Run the pipeline: <code class="inline">python -m ml.pipeline.run</code> and reload.`;
+    }
+    initLab();
+}
+
+/* ---------- overview ---------- */
+function pct(v, d = 1) { return v == null ? '—' : (v * 100).toFixed(d) + '%'; }
+function num(v, d = 3) { return v == null ? '—' : Number(v).toFixed(d); }
+
+function renderOverview() {
+    const s = METRICS.serving_model, se = METRICS.models[s.name], t = se.test_metrics;
+    const kpi = (v, l) => `<div class="kpi"><div class="kpi-val">${v}</div><div class="kpi-lbl">${l}</div></div>`;
+    document.getElementById('serving-kpis').innerHTML = [
+        kpi(s.name, 'Serving model (' + (s.members || []).join(' + ') + ')'),
+        kpi(pct(t.recall), 'Recall — floods caught'),
+        kpi(pct(t.precision), 'Precision'),
+        kpi(pct(t.f1), 'F1 score'),
+        kpi(pct(t.roc_auc), 'ROC-AUC'),
+        kpi(pct(t.pr_auc), 'PR-AUC')
+    ].join('');
+    const env = METRICS.environment, data = METRICS.data;
+    document.getElementById('env-line').textContent =
+        `Environment — Python ${env.python}, scikit-learn ${env.sklearn}, LightGBM ${env.lightgbm}, XGBoost ${env.xgboost}, seed ${env.seed}. Generated ${new Date(METRICS.generated_utc).toLocaleString()}`;
+    const dk = document.getElementById('data-kpis');
+    dk.innerHTML = [
+        kpi(data.n_train + data.n_test, 'Records (train + test)'),
+        kpi(`${data.n_train} / ${data.n_test}`, 'Stratified train / test split'),
+        kpi(data.features.length, 'Physics-informed features'),
+        kpi('5-fold', 'Stratified CV on train')
+    ].join('');
+}
+
+/* ---------- comparison table ---------- */
+function renderComparison() {
+    const tb = document.querySelector('#comparison-table tbody');
+    const serving = METRICS.serving_model.name;
+    tb.innerHTML = METRICS.comparison.map(row => {
+        const m = METRICS.models[row.model], t = m.test_metrics;
+        const badge = row.model === serving ? '<span class="badge-serving">SERVING</span>' : '';
+        return `<tr class="${row.model === serving ? 'serving' : ''}">
+            <td>${row.model}${badge}</td>
+            <td>${pct(t.accuracy)}</td><td>${pct(t.precision)}</td><td>${pct(t.recall)}</td>
+            <td>${pct(t.f1)}</td><td>${pct(t.f2)}</td>
+            <td>${num(t.roc_auc)}</td><td>${num(t.pr_auc)}</td>
+            <td>${num(t.mcc)}</td><td>${num(t.cohen_kappa)}</td><td>${num(t.brier_score)}</td>
+        </tr>`;
+    }).join('');
+    const best = METRICS.comparison[0];
+    document.getElementById('cv-note').textContent =
+        `${best.model} leads the ranking (CV-F1 ${pct(METRICS.models[best.model].cv_5fold.f1.mean)}, CV-recall ${pct(METRICS.models[best.model].cv_5fold.recall.mean)}); the soft-voting ensemble of the best members is deployed for variance reduction.`;
+}
+
+/* ---------- importance ---------- */
+function renderImportance() {
+    const sel = document.getElementById('imp-model-select');
+    sel.innerHTML = Object.keys(METRICS.models).map(n => `<option value="${n}">${n}</option>`).join('');
+    sel.value = METRICS.serving_model.name;
+    sel.addEventListener('change', drawImportance);
+    drawImportance();
+}
+function drawImportance() {
+    const name = document.getElementById('imp-model-select').value;
+    const imps = METRICS.models[name].feature_importances || [];
+    const max = Math.max(...imps.map(i => i.importance), 0.001);
+    document.getElementById('imp-bars').innerHTML = imps.map(i => `
+        <div class="imp-row">
+            <div>${i.feature}</div>
+            <div><div class="imp-bar" style="width:${(i.importance / max * 100).toFixed(1)}%"></div></div>
+            <div class="imp-val">${(i.importance * 100).toFixed(1)}%</div>
+        </div>`).join('');
+}
+
+/* ---------- curves ---------- */
+function drawCurve(canvasId, kind) {
+    if (!METRICS) return;
+    const c = document.getElementById(canvasId), ctx = c.getContext('2d');
+    const W = c.width, H = c.height, pad = { l: 56, r: 14, t: 20, b: 42 };
+    ctx.clearRect(0, 0, W, H);
+    ctx.font = '12px Arial'; ctx.fillStyle = '#64748b';
+
+    const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+    const isROC = kind === 'roc';
+    // axes
+    ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1;
+    ctx.strokeRect(pad.l, pad.t, plotW, plotH);
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(isROC ? 'False Positive Rate' : 'Recall', pad.l + plotW / 2 - 55, H - 8);
+    ctx.save(); ctx.translate(14, pad.t + plotH / 2); ctx.rotate(-Math.PI / 2);
+    ctx.fillText(isROC ? 'True Positive Rate' : 'Precision', -45, 0); ctx.restore();
+    // gridlines + ticks 0..1
+    for (let i = 0; i <= 5; i++) {
+        const f = i / 5, x = pad.l + f * plotW, y = pad.t + plotH - f * plotH;
+        ctx.strokeStyle = '#eef2f7'; ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + plotH); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + plotW, y); ctx.stroke();
+        ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'center';
+        ctx.fillText(f.toFixed(1), x, pad.t + plotH + 14);
+        ctx.textAlign = 'right'; ctx.fillText(f.toFixed(1), pad.l - 6, y + 4);
+    }
+    ctx.textAlign = 'left';
+    if (isROC) { // diagonal
+        ctx.strokeStyle = '#cbd5e1'; ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(pad.l, pad.t + plotH); ctx.lineTo(pad.l + plotW, pad.t); ctx.stroke();
+        ctx.setLineDash([]);
+    }
+    // curves
+    const mapped = Object.entries(METRICS.models).map(([name, m]) => {
+        const curve = m.curves[kind];
+        const xs = isROC ? curve.fpr : curve.recall, ys = isROC ? curve.tpr : curve.precision;
+        const auc = isROC ? m.test_metrics.roc_auc : m.test_metrics.pr_auc;
+        return { name, xs, ys, auc };
+    }).sort((a, b) => (b.auc || 0) - (a.auc || 0));
+
+    mapped.forEach((s, rank) => {
+        ctx.strokeStyle = MODEL_COLORS[s.name] || ['#003366', '#b91c1c', '#0f766e', '#7c3aed', '#ea580c', '#94a3b8'][rank % 6];
+        ctx.lineWidth = s.name === METRICS.serving_model.name ? 3 : 1.6;
+        ctx.beginPath();
+        s.xs.forEach((x, i) => {
+            const px = pad.l + x * plotW, py = pad.t + plotH - s.ys[i] * plotH;
+            i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+        });
+        ctx.stroke();
+    });
+    // legend
+    let lx = pad.l + 8;
+    ctx.font = 'bold 11px Arial';
+    mapped.forEach((s, rank) => {
+        const ly = pad.t + 16 + rank * 17;
+        ctx.fillStyle = MODEL_COLORS[s.name] || ['#003366', '#b91c1c', '#0f766e', '#7c3aed', '#ea580c', '#94a3b8'][rank % 6];
+        ctx.fillRect(lx, ly - 8, 18, 3);
+        ctx.fillStyle = '#334155';
+        ctx.fillText(`${s.name}  (AUC ${num(s.auc)})`, lx + 24, ly - 3);
+    });
+}
+
+function renderServingDetail() {
+    const s = METRICS.serving_model, se = METRICS.models[s.name];
+    const t = se.test_metrics, to = se.test_metrics_at_best_f1_threshold, cv = se.cv_5fold;
+    const cm = t.confusion_matrix;
+    const kpi = (v, l) => `<div class="kpi"><div class="kpi-val">${v}</div><div class="kpi-lbl">${l}</div></div>`;
+    document.getElementById('serving-detail').innerHTML = [
+        kpi(`${cm[0][0]} / ${cm[0][1]}`, 'True negatives / False alarms'),
+        kpi(`${cm[1][1]} / ${cm[1][0]}`, 'Floods caught / Missed floods'),
+        kpi(num(cv.f1.mean) + ' ± ' + num(cv.f1.std), 'CV F1 (mean ± std, 5-fold)'),
+        kpi(num(cv.recall.mean) + ' ± ' + num(cv.recall.std), 'CV recall (mean ± std)'),
+        kpi(pct(to.recall), 'Recall @ best-F1 threshold ' + se.best_f1_threshold),
+        kpi(num(t.log_loss), 'Log loss (calibration)')
+    ].join('');
+}
+
+/* ---------- EDA ---------- */
+function renderEDA() {
+    const g = document.getElementById('eda-gallery');
+    if (!EDA) {
+        g.innerHTML = '<p class="panel-sub">EDA summary not found. Run <code class="inline">python ml/scripts/eda.py</code>.</p>';
+        return;
+    }
+    document.getElementById('eda-stats').textContent =
+        `${EDA.n_records} records — ${EDA.n_flood} flood (${pct(EDA.flood_ratio)}) vs ${EDA.n_no_flood} non-flood, ${EDA.missing_values} missing values.`;
+    g.innerHTML = EDA.charts.map(f => `<img class="chart-img" src="${REPORTS_BASE}/${f}" alt="${f}" loading="lazy">`).join('');
+}
+
+/* ---------- prediction lab ---------- */
+const CONTROLS = [
+    { id: 'r6',    label: 'v-r6',    get: v => v },
+    { id: 'r24',   label: 'v-r24',   get: v => v },
+    { id: 'ant',   label: 'v-ant',   get: v => v },
+    { id: 'sm',    label: 'v-sm',    get: v => v },
+    { id: 'slope', label: 'v-slope', get: v => v },
+    { id: 'elev',  label: 'v-elev',  get: v => v },
+    { id: 'cn',    label: 'v-cn',    get: v => v },
+];
+
+const PRESETS = [
+    { name: 'Calm Day', cls: '', v: { r6: 5, r24: 10, ant: 5, sm: 25, slope: 20, elev: 1400, cn: 65 } },
+    { name: 'Moderate Rain', cls: '', v: { r6: 45, r24: 90, ant: 40, sm: 55, slope: 25, elev: 1500, cn: 75 } },
+    { name: 'Chamoli 2023', cls: 'severe', v: { r6: 90, r24: 160, ant: 250, sm: 92, slope: 30, elev: 1400, cn: 81 } },
+    { name: 'Kedarnath 2013', cls: 'severe', v: { r6: 340, r24: 420, ant: 340, sm: 99, slope: 35, elev: 3583, cn: 74 } },
+];
+
+let labTimer = null;
+
+function initLab() {
+    const row = document.getElementById('preset-row');
+    row.innerHTML = PRESETS.map((p, i) =>
+        `<button class="preset-btn ${p.cls}" data-i="${i}">${p.name}</button>`).join('');
+    row.querySelectorAll('.preset-btn').forEach(btn =>
+        btn.addEventListener('click', () => {
+            const p = PRESETS[btn.dataset.i];
+            Object.entries(p.v).forEach(([k, v]) => { document.getElementById('c-' + k).value = v; updateLabels(); });
+            schedulePredict();
+        }));
+    CONTROLS.forEach(c => {
+        document.getElementById('c-' + c.id).addEventListener('input', () => { updateLabels(); schedulePredict(); });
+    });
+    updateLabels(); schedulePredict();
+}
+
+function updateLabels() {
+    CONTROLS.forEach(c => {
+        const el = document.getElementById('c-' + c.id);
+        document.getElementById(c.label).textContent = el.value;
+    });
+}
+
+function schedulePredict() {
+    clearTimeout(labTimer);
+    labTimer = setTimeout(predictLive, 250); // debounce slider storms
+}
+
+async function predictLive() {
+    const inp = id => parseFloat(document.getElementById('c-' + id).value);
+    const body = {
+        rainfall_6h: inp('r6'), rainfall_24h: inp('r24'),
+        soil_moisture: inp('sm'), slope: inp('slope'), elevation: inp('elev'),
+        cn: inp('cn'), antecedent_rain: inp('ant')
+    };
+    document.getElementById('lab-sub').textContent = 'Computing…';
+    try {
+        const res = await fetch(`${API_BASE}/predict`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        renderPrediction(json.prediction);
+    } catch (err) {
+        document.getElementById('lab-sub').innerHTML =
+            'Backend unreachable — start it with <code class="inline">start_system.bat</code> or <code class="inline">uvicorn app.main:app</code>.';
+    }
+}
+
+function renderPrediction(p) {
+    const colors = { LOW: '#138808', MODERATE: '#d97706', HIGH: '#ea580c', SEVERE: '#dc2626' };
+    const prob = p.flood_probability;
+    const probEl = document.getElementById('lab-prob');
+    probEl.textContent = (prob * 100).toFixed(1) + '%';
+    probEl.style.color = colors[p.risk_level] || '#64748b';
+    const tier = document.getElementById('lab-tier');
+    tier.textContent = p.risk_level;
+    tier.style.background = colors[p.risk_level] || '#64748b';
+    document.getElementById('lab-sub').textContent = p.prediction.replace('_', ' ');
+
+    const eng = p.features || {};
+    const comps = p.components || {};
+    const set = (id, v) => document.getElementById(id).textContent = v;
+    set('lab-runoff', eng.expected_runoff_mm != null ? eng.expected_runoff_mm + ' mm' : '—');
+    set('lab-cnadj', eng.cn_adjusted != null ? eng.cn_adjusted : '—');
+    set('lab-tc', eng.time_concentration_min != null ? eng.time_concentration_min + ' min' : '—');
+    set('lab-lead', p.timing && p.timing.time_to_flood_hours != null ? p.timing.time_to_flood_hours + ' h' : 'n/a (issued at HIGH/SEVERE)');
+    set('lab-mlprob', comps.ml_probability != null ? (comps.ml_probability * 100).toFixed(1) + '%' : 'n/a');
+    set('lab-physprob', comps.physics_probability != null ? (comps.physics_probability * 100).toFixed(1) + '%' : '—');
+    document.getElementById('lab-actions').innerHTML =
+        (p.actions || []).map(a => `<li>${a}</li>`).join('');
+}
+
+boot();
+</script>
+</body>
+</html>

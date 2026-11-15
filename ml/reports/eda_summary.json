@@ -1,0 +1,66 @@
+{
+  "n_records": 232,
+  "n_flood": 52,
+  "n_no_flood": 180,
+  "flood_ratio": 0.2241,
+  "missing_values": 0,
+  "target_correlation": {
+    "api": 0.8708,
+    "antecedent_rain_3d": 0.8708,
+    "expected_runoff_mm": 0.821,
+    "rainfall_24h": 0.8171,
+    "rainfall_6h": 0.8134,
+    "soil_moisture": 0.6458,
+    "cn_adjusted": 0.4952,
+    "potential_retention_mm": -0.4745,
+    "cn": 0.3184,
+    "time_concentration_min": -0.117,
+    "elevation": -0.0946,
+    "slope": 0.0179
+  },
+  "highly_collinear_pairs": {
+    "antecedent_rain_3d ~ api": 1.0,
+    "rainfall_6h ~ expected_runoff_mm": 0.989,
+    "rainfall_6h ~ rainfall_24h": 0.968,
+    "rainfall_24h ~ expected_runoff_mm": 0.952,
+    "elevation ~ time_concentration_min": 0.937,
+    "cn_adjusted ~ potential_retention_mm": -0.996
+  },
+  "describe": {
+    "0": {
+      "rainfall_6h": 21.54,
+      "rainfall_24h": 38.6,
+      "soil_moisture": 54.87,
+      "slope": 29.64,
+      "elevation": 2163.76,
+      "cn": 76.49,
+      "antecedent_rain_3d": 17.98,
+      "api": 16.19,
+      "cn_adjusted": 79.47,
+      "potential_retention_mm": 69.27,
+      "expected_runoff_mm": 6.22,
+      "time_concentration_min": 6.75
+    },
+    "1": {
+      "rainfall_6h": 159.43,
+      "rainfall_24h": 258.14,
+      "soil_moisture": 88.85,
+      "slope": 29.96,
+      "elevation": 1963.94,
+      "cn": 80.32,
+      "antecedent_rain_3d": 189.37,
+      "api": 170.43,
+      "cn_adjusted": 89.9,
+      "potential_retention_mm": 29.07,
+      "expected_runoff_mm": 132.16,
+      "time_concentration_min": 6.15
+    }
+  },
+  "charts": [
+    "eda_class_balance.png",
+    "eda_distributions.png",
+    "eda_boxplots.png",
+    "eda_correlation.png",
+    "eda_scatter_rainfall.png"
+  ]
+}
